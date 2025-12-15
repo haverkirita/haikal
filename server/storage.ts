@@ -1,9 +1,9 @@
-import { type Question, type Score, type InsertScore, type InsertQuestion, type Admin } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { type Question, type Score, type InsertScore, type InsertQuestion, type Admin, questions, scores } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
-const defaultQuestions: Question[] = [
+const defaultQuestions: InsertQuestion[] = [
   {
-    id: 1,
     question: "Apa yang dimaksud dengan angkatan kerja?",
     options: [
       "Seluruh penduduk dalam suatu negara",
@@ -14,7 +14,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 1
   },
   {
-    id: 2,
     question: "Batas usia minimal seseorang untuk masuk angkatan kerja di Indonesia adalah...",
     options: [
       "13 tahun",
@@ -25,7 +24,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 1
   },
   {
-    id: 3,
     question: "Apa yang dimaksud dengan pengangguran friksional?",
     options: [
       "Pengangguran karena tidak ada lowongan pekerjaan",
@@ -36,7 +34,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 2
   },
   {
-    id: 4,
     question: "Upah Minimum Regional (UMR) ditetapkan oleh...",
     options: [
       "Presiden",
@@ -47,7 +44,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 2
   },
   {
-    id: 5,
     question: "Hak pekerja yang dijamin oleh undang-undang adalah...",
     options: [
       "Bekerja 12 jam sehari tanpa istirahat",
@@ -58,7 +54,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 1
   },
   {
-    id: 6,
     question: "Apa yang dimaksud dengan tenaga kerja terampil?",
     options: [
       "Tenaga kerja yang tidak memerlukan pendidikan",
@@ -69,7 +64,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 1
   },
   {
-    id: 7,
     question: "BPJS Ketenagakerjaan memberikan perlindungan dalam hal...",
     options: [
       "Hanya kecelakaan kerja",
@@ -80,7 +74,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 1
   },
   {
-    id: 8,
     question: "Pengangguran struktural disebabkan oleh...",
     options: [
       "Pergantian musim",
@@ -91,7 +84,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 1
   },
   {
-    id: 9,
     question: "Kewajiban pekerja yang benar adalah...",
     options: [
       "Datang kerja sesuka hati",
@@ -102,7 +94,6 @@ const defaultQuestions: Question[] = [
     correctAnswer: 1
   },
   {
-    id: 10,
     question: "Tingkat Partisipasi Angkatan Kerja (TPAK) dihitung dengan rumus...",
     options: [
       "Jumlah pengangguran dibagi jumlah penduduk",
@@ -122,79 +113,67 @@ export interface IStorage {
   deleteQuestion(id: number): Promise<boolean>;
   getScores(): Promise<Score[]>;
   addScore(score: InsertScore): Promise<Score>;
-  deleteScore(id: string): Promise<boolean>;
+  deleteScore(id: number): Promise<boolean>;
   clearScores(): Promise<void>;
   validateAdmin(username: string, password: string): Promise<Admin | null>;
+  initializeDefaultQuestions(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private questions: Map<number, Question>;
-  private scores: Map<string, Score>;
-  private nextQuestionId: number;
-
-  constructor() {
-    this.questions = new Map();
-    this.scores = new Map();
-    
-    defaultQuestions.forEach(q => this.questions.set(q.id, q));
-    this.nextQuestionId = defaultQuestions.length + 1;
+export class DatabaseStorage implements IStorage {
+  async initializeDefaultQuestions(): Promise<void> {
+    const existingQuestions = await db.select().from(questions);
+    if (existingQuestions.length === 0) {
+      for (const q of defaultQuestions) {
+        await db.insert(questions).values(q);
+      }
+    }
   }
 
   async getQuestions(): Promise<Question[]> {
-    return Array.from(this.questions.values()).sort((a, b) => a.id - b.id);
+    return await db.select().from(questions);
   }
 
   async getQuestionById(id: number): Promise<Question | undefined> {
-    return this.questions.get(id);
+    const [question] = await db.select().from(questions).where(eq(questions.id, id));
+    return question || undefined;
   }
 
   async addQuestion(insertQuestion: InsertQuestion): Promise<Question> {
-    const question: Question = {
-      ...insertQuestion,
-      id: this.nextQuestionId++,
-    };
-    this.questions.set(question.id, question);
+    const [question] = await db.insert(questions).values(insertQuestion).returning();
     return question;
   }
 
   async updateQuestion(id: number, insertQuestion: InsertQuestion): Promise<Question | undefined> {
-    if (!this.questions.has(id)) {
-      return undefined;
-    }
-    const question: Question = {
-      ...insertQuestion,
-      id,
-    };
-    this.questions.set(id, question);
-    return question;
+    const [question] = await db
+      .update(questions)
+      .set(insertQuestion)
+      .where(eq(questions.id, id))
+      .returning();
+    return question || undefined;
   }
 
   async deleteQuestion(id: number): Promise<boolean> {
-    return this.questions.delete(id);
+    const result = await db.delete(questions).where(eq(questions.id, id)).returning();
+    return result.length > 0;
   }
 
   async getScores(): Promise<Score[]> {
-    const allScores = Array.from(this.scores.values());
+    const allScores = await db.select().from(scores);
     return allScores.sort((a, b) => b.score - a.score);
   }
 
   async addScore(insertScore: InsertScore): Promise<Score> {
-    const id = randomUUID();
-    const score: Score = {
-      ...insertScore,
-      id,
-      createdAt: new Date().toISOString(),
-    };
-    this.scores.set(id, score);
+    const [score] = await db.insert(scores).values(insertScore).returning();
     return score;
   }
 
-  async deleteScore(id: string): Promise<boolean> {
-    return this.scores.delete(id);
+  async deleteScore(id: number): Promise<boolean> {
+    const result = await db.delete(scores).where(eq(scores.id, id)).returning();
+    return result.length > 0;
   }
 
   async clearScores(): Promise<void> {
-    this.scores.clear();
+    await db.delete(scores);
   }
 
   async validateAdmin(username: string, password: string): Promise<Admin | null> {
@@ -217,4 +196,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

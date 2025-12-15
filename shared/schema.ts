@@ -1,4 +1,21 @@
 import { z } from "zod";
+import { pgTable, serial, text, integer, timestamp, json } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+
+export const questions = pgTable("questions", {
+  id: serial("id").primaryKey(),
+  question: text("question").notNull(),
+  options: json("options").$type<string[]>().notNull(),
+  correctAnswer: integer("correct_answer").notNull(),
+});
+
+export const scores = pgTable("scores", {
+  id: serial("id").primaryKey(),
+  studentName: text("student_name").notNull(),
+  score: integer("score").notNull(),
+  totalQuestions: integer("total_questions").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 export interface Question {
   id: number;
@@ -8,11 +25,11 @@ export interface Question {
 }
 
 export interface Score {
-  id: string;
+  id: number;
   studentName: string;
   score: number;
   totalQuestions: number;
-  createdAt: string;
+  createdAt: Date;
 }
 
 export interface Admin {

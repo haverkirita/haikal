@@ -3,6 +3,7 @@ import session from "express-session";
 import { randomBytes } from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
+import { storage } from "./storage";
 import { createServer } from "http";
 
 const app = express();
@@ -84,6 +85,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  await storage.initializeDefaultQuestions();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

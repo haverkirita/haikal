@@ -136,7 +136,8 @@ export async function registerRoutes(
 
   app.delete("/api/admin/scores/:id", requireAdmin, async (req, res) => {
     try {
-      const deleted = await storage.deleteScore(req.params.id);
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteScore(id);
       
       if (!deleted) {
         return res.status(404).json({ error: "Skor tidak ditemukan" });
