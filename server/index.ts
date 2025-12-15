@@ -99,8 +99,11 @@ export async function initializeApp(httpServer?: Server) {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Send a JSON error response but do not rethrow — rethrowing in a
+    // serverless environment causes the function invocation to fail
+    // (FUNCTION_INVOCATION_FAILED) even when a response has been sent.
+    console.error("Unhandled error:", err);
     res.status(status).json({ message });
-    throw err;
   });
 
   if (process.env.NODE_ENV === "production") {

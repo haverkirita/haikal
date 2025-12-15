@@ -127,11 +127,18 @@ export class DatabaseStorage implements IStorage {
       return;
     }
 
-    const existingQuestions = await db.select().from(questions);
-    if (existingQuestions.length === 0) {
-      for (const q of defaultQuestions) {
-        await db.insert(questions).values(q);
+    try {
+      const existingQuestions = await db.select().from(questions);
+      if (existingQuestions.length === 0) {
+        for (const q of defaultQuestions) {
+          await db.insert(questions).values(q);
+        }
       }
+    } catch (err) {
+      // If DB connection fails during initialization, log and continue with
+      // in-memory fallback so the serverless function can still respond.
+      console.error("Failed to initialize default questions:", err);
+      return;
     }
   }
 
