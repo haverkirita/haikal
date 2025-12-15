@@ -201,7 +201,7 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
     const allScores = await db.select().from(scores);
-    return allScores.sort((a, b) => b.score - a.score);
+    return allScores.sort((a: Score, b: Score) => b.score - a.score);
   }
 
   async addScore(insertScore: InsertScore): Promise<Score> {
