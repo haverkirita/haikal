@@ -1,5 +1,5 @@
 import { type Question, type Score, type InsertScore, type InsertQuestion, type Admin, questions, scores } from "@shared/schema";
-import { db } from "./db";
+import { db, hasDatabase } from "./db";
 import { eq } from "drizzle-orm";
 
 const defaultQuestions: InsertQuestion[] = [
@@ -121,6 +121,12 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async initializeDefaultQuestions(): Promise<void> {
+    if (!hasDatabase) {
+      // Nothing to initialize for persistent DB; the in-memory fallback will
+      // expose the default questions automatically.
+      return;
+    }
+
     const existingQuestions = await db.select().from(questions);
     if (existingQuestions.length === 0) {
       for (const q of defaultQuestions) {
@@ -130,20 +136,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuestions(): Promise<Question[]> {
+    if (!hasDatabase) {
+      // Return default questions when no DB is configured so the app remains usable.
+      return defaultQuestions.map((q, i) => ({ id: i + 1, ...q }));
+    }
     return await db.select().from(questions);
   }
 
   async getQuestionById(id: number): Promise<Question | undefined> {
+    if (!hasDatabase) {
+      return defaultQuestions.map((q, i) => ({ id: i + 1, ...q })).find((q) => q.id === id);
+    }
+
     const [question] = await db.select().from(questions).where(eq(questions.id, id));
     return question || undefined;
   }
 
   async addQuestion(insertQuestion: InsertQuestion): Promise<Question> {
+    if (!hasDatabase) {
+      // Not persisted, but return a synthetic question to keep API consistent.
+      const questions = defaultQuestions.map((q, i) => ({ id: i + 1, ...q }));
+      const id = questions.length + 1;
+      const question = { id, ...insertQuestion } as Question;
+      return question;
+    }
+
     const [question] = await db.insert(questions).values(insertQuestion).returning();
     return question;
   }
 
   async updateQuestion(id: number, insertQuestion: InsertQuestion): Promise<Question | undefined> {
+    if (!hasDatabase) {
+      const existing = defaultQuestions.map((q, i) => ({ id: i + 1, ...q })).find((q) => q.id === id);
+      if (!existing) return undefined;
+      return { id, ...insertQuestion } as Question;
+    }
+
     const [question] = await db
       .update(questions)
       .set(insertQuestion)
@@ -153,26 +181,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteQuestion(id: number): Promise<boolean> {
+    if (!hasDatabase) {
+      const existing = defaultQuestions.map((q, i) => ({ id: i + 1, ...q })).find((q) => q.id === id);
+      return Boolean(existing);
+    }
     const result = await db.delete(questions).where(eq(questions.id, id)).returning();
     return result.length > 0;
   }
 
   async getScores(): Promise<Score[]> {
+    if (!hasDatabase) {
+      return [];
+    }
     const allScores = await db.select().from(scores);
     return allScores.sort((a, b) => b.score - a.score);
   }
 
   async addScore(insertScore: InsertScore): Promise<Score> {
+    if (!hasDatabase) {
+      // Return a synthetic score (not persisted) so clients can move forward.
+      const score: Score = {
+        id: Math.floor(Math.random() * 1000000),
+        studentName: insertScore.studentName,
+        score: insertScore.score,
+        totalQuestions: insertScore.totalQuestions,
+        createdAt: new Date(),
+      };
+      return score;
+    }
+
     const [score] = await db.insert(scores).values(insertScore).returning();
     return score;
   }
 
   async deleteScore(id: number): Promise<boolean> {
+    if (!hasDatabase) {
+      return false;
+    }
     const result = await db.delete(scores).where(eq(scores.id, id)).returning();
     return result.length > 0;
   }
 
   async clearScores(): Promise<void> {
+    if (!hasDatabase) return;
     await db.delete(scores);
   }
 
