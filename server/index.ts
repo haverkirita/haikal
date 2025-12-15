@@ -113,28 +113,8 @@ export async function initializeApp(httpServer?: Server) {
   return app;
 }
 
-// Backwards-compatible standalone start (used by `npm run dev` and `npm start` locally)
-if (process.env.RUN_STANDALONE === "true" || require.main === module) {
-  (async () => {
-    const app = await initializeApp();
-    const httpServer = createServer(app);
-
-    // In non-production use Vite dev server
-    if (process.env.NODE_ENV !== "production") {
-      const { setupVite } = await import("./vite");
-      await setupVite(httpServer, app);
-    }
-
-    const port = parseInt(process.env.PORT || "5000", 10);
-    httpServer.listen(
-      {
-        port,
-        host: "0.0.0.0",
-        reusePort: true,
-      },
-      () => {
-        log(`serving on port ${port}`);
-      },
-    );
-  })();
-}
+// Note: standalone server startup is intentionally moved to
+// `server/standalone.ts` so that importing this module never
+// creates a listening socket. This keeps the code compatible with
+// serverless environments (e.g. Vercel) which expect the module to
+// export handlers without calling `listen()`.
