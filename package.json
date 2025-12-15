@@ -7,7 +7,7 @@
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "tsx script/build.ts",
     "vercel-build": "NODE_ENV=production tsx script/build.ts",
-    "vercel:env:apply": "tsx scripts/vercel/add-envs.ts"
+    "vercel:env:apply": "tsx scripts/vercel/add-envs.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "db:push": "drizzle-kit push"
