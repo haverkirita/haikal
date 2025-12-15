@@ -10,7 +10,7 @@ Deployment notes for Vercel
   - `VERCEL_TOKEN` (Personal token from Vercel)
   - `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`
 
-- The default workflow is configured to run on a self-hosted runner. Make sure you have a self-hosted runner registered with your repository or organization that has:
+- The default workflow is configured to run on a GitHub-hosted runner (`ubuntu-latest`). If you prefer to use a self-hosted runner, change `runs-on` back to `self-hosted` in `.github/workflows/vercel-deploy.yml` and ensure the runner has:
   - Node.js (>=20), `npm` and `tsx` available
   - Access to Docker/network to reach your database and Vercel APIs if needed
   - Sufficient disk space to run `npm ci` and `vite` builds
