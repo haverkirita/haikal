@@ -1,5 +1,4 @@
 import serverless from "serverless-http";
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { initializeApp } from "../server/index";
 
 let handler: any | null = null;
@@ -12,7 +11,7 @@ async function getHandler() {
   return handler;
 }
 
-export default async function (req: VercelRequest, res: VercelResponse) {
+export default async function (req: any, res: any) {
   const h = await getHandler();
   return h(req, res);
 }
