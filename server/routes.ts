@@ -15,6 +15,10 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Basic health endpoint for uptime checks
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
   
   app.get("/api/questions", async (_req, res) => {
     try {

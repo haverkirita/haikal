@@ -3,11 +3,22 @@ import fs from "fs";
 import path from "path";
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(__dirname, "public");
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+  // Look for a build directory in a few places. In the Vercel build the
+  // client is copied to the project `public/` root; when the server is
+  // bundled `__dirname` may be `dist/` so check both places and fall back
+  // gracefully if none are present (Vercel can serve static files itself).
+  const candidates = [
+    path.resolve(__dirname, "public"),
+    path.resolve(process.cwd(), "public"),
+    path.resolve(process.cwd(), "dist/public"),
+  ];
+
+  const distPath = candidates.find((p) => fs.existsSync(p));
+  if (!distPath) {
+    console.warn(
+      "serveStatic: no client build found (checked __dirname/public, public/, dist/public). Skipping static serving.",
     );
+    return;
   }
 
   app.use(express.static(distPath));
