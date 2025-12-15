@@ -24,3 +24,13 @@ Deployment notes for Vercel
 - The server API runs as a Vercel Serverless Function at `/api`.
 
 - Note: Serverless functions are stateless — session persistence requires an external session store.
+
+- Quick import helper:
+  - Create `.vercel.env.json` from `.vercel.env.json.example` and fill values.
+  - Run (ensure `VERCEL_TOKEN` and `VERCEL_PROJECT_ID` are available):
+
+  ```bash
+  VERCEL_TOKEN=your_token VERCEL_PROJECT_ID=prj_xxx npm run vercel:env:apply -- --project prj_xxx
+  ```
+
+  The script will add variables to the specified Vercel project and report any that already exist or fail to add.
