@@ -20,9 +20,9 @@ export default function Scores() {
     return null;
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("id-ID", {
+  const formatDate = (dateInput: string | Date) => {
+    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    return d.toLocaleString("id-ID", {
       day: "numeric",
       month: "short",
       year: "numeric",
